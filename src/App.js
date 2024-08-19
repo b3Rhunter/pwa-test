@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers'
+import * as Keychain from 'react-native-keychain';
 
 function App() {
 
@@ -31,10 +32,28 @@ function App() {
     }
   }
 
+  const createAccount = async () => {
+    try {
+      const provider = new ethers.InfuraProvider('mainnet');
+      const wallet = ethers.Wallet.createRandom(provider);
+      
+      // Store the private key in the keychain
+      await Keychain.setGenericPassword('walletPrivateKey', wallet.privateKey);
+      
+      console.log('Wallet created and private key stored in keychain');
+      setAccount(wallet.address);
+      setConnected(true);
+    } catch(error) {
+      console.log(error.message);
+    }
+  }
+
   return (
     <div className="App">
-      
+
       <h1>Bank of Ethereum</h1>
+
+      <button onClick={createAccount}>create account</button>
 
       {!connected && 
         <button 
