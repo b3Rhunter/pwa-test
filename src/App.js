@@ -275,56 +275,57 @@ function App() {
       alert("Failed to switch network. Please try again.");
     }
   };
-  
+
 
   return (
     <div className="App">
-      <h1>Bank of Ethereum</h1>
-      <img className='logo' src={Logo} alt='logo'/>
-      <select className='network' onChange={(e) => switchNetwork(e.target.value)}>
-        <option value="mainnet">Ethereum</option>
-        <option value="sepolia" selected>Sepolia</option>
-        <option value="optimism">Optimism</option>
-      </select>
+      <img className='logo' src={Logo} alt='logo' />
+      <div className='content'>
+        <h1>Bank of Ethereum</h1>
+        <select className='network' onChange={(e) => switchNetwork(e.target.value)}>
+          <option value="mainnet">Ethereum</option>
+          <option value="sepolia" selected>Sepolia</option>
+          <option value="optimism">Optimism</option>
+        </select>
 
-      {!connected && (
-        <>
-          <button
-            className='account'
-            onClick={connect}>
-            Login
-          </button>
-          {!hasStoredKey && (
-            <div className='login'>
-              <button onClick={createAccount}>Create Account</button>
-              <button onClick={importAccount}>Import Account</button>
+        {!connected && (
+          <>
+            <button
+              className='account'
+              onClick={connect}>
+              Login
+            </button>
+            {!hasStoredKey && (
+              <div className='login'>
+                <button onClick={createAccount}>Create Account</button>
+                <button onClick={importAccount}>Import Account</button>
+              </div>
+            )}
+          </>
+        )
+        }
+
+        {connected && (
+          <>
+            <button
+              className='account'
+              onClick={disconnect}>
+              {account.substr(0, 6) + "..."}
+            </button>
+            <p className='balance'>Balance: {Number(ethers.formatEther(balance)).toFixed(4)} ETH</p>
+
+            <div className='buttons'>
+              <button onClick={deposit}>Deposit</button>
+              <button onClick={withdraw}>Withdraw</button>
             </div>
-          )}
-        </>
-      )
-      }
 
-      {connected && (
-        <>
-          <button
-            className='account'
-            onClick={disconnect}>
-            {account.substr(0, 6) + "..."}
-          </button>
-          <p className='balance'>Balance: {Number(ethers.formatEther(balance)).toFixed(4)} ETH</p>
-
-          <div className='buttons'>
-            <button onClick={deposit}>Deposit</button>
-            <button onClick={withdraw}>Withdraw</button>
-          </div>
-
-          <div className='footer'>
-            <button onClick={deleteAccount}>Delete Account</button>
-            <button onClick={getPrivateKey}>Export Keys</button>
-          </div>
-        </>
-      )}
-
+            <div className='footer'>
+              <button onClick={deleteAccount}>Delete Account</button>
+              <button onClick={getPrivateKey}>Export Keys</button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

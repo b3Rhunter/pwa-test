@@ -90,4 +90,15 @@ button:active {
   height: 75vh;
   position: fixed;
   opacity: 0.05;
+  z-index: 1;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  z-index: 2;
 }
