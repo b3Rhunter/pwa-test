@@ -38,3 +38,21 @@ button {
   top: 20px;
   right: 40px;
 }
+
+.buttons {
+  display: flex;
+  gap: 20px;
+}
+
+.balance {
+  position: fixed;
+  top: 10px;
+  left: 40px;
+}
+
+.footer {
+  display: flex;
+  gap: 20px;
+  position: fixed;
+  bottom: 20px;
+}
