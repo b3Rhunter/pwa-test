@@ -85,3 +85,9 @@ button:active {
   display: flex;
   gap: 10px;
 }
+
+.logo {
+  height: 75vh;
+  position: fixed;
+  opacity: 0.05;
+}

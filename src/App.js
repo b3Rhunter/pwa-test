@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ethers } from 'ethers'
+import Logo from './logo.svg'
 
 function App() {
 
@@ -279,6 +280,7 @@ function App() {
   return (
     <div className="App">
       <h1>Bank of Ethereum</h1>
+      <img className='logo' src={Logo} alt='logo'/>
       <select className='network' onChange={(e) => switchNetwork(e.target.value)}>
         <option value="mainnet">Ethereum</option>
         <option value="sepolia" selected>Sepolia</option>
