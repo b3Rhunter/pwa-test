@@ -5,32 +5,39 @@ function App() {
 
   const [connected, setConnected] = useState(false)
   const [account, setAccount] = useState()
+  const [balance, setBalance] = useState("0")
 
   const connect = async () => {
     try {
       const db = await openDatabase();
       const encryptedKey = await getEncryptedKey(db);
+      let provider, address;
       
       if (encryptedKey) {
         const privateKey = await decryptPrivateKey(encryptedKey.encryptedData, encryptedKey.iv, encryptedKey.key);
-        const provider = new ethers.InfuraProvider('mainnet');
+        provider = new ethers.InfuraProvider('mainnet');
         const wallet = new ethers.Wallet(privateKey, provider);
-        const address = await wallet.getAddress();
-        setConnected(true);
-        setAccount(address);
+        address = await wallet.getAddress();
       } else {
-        const provider = new ethers.BrowserProvider(window.ethereum);
+        provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-        const address = await signer.getAddress();
-        setConnected(true);
-        setAccount(address);
+        address = await signer.getAddress();
       }
+      
+      setConnected(true);
+      setAccount(address);
+      await fetchBalance(address, provider);
     } catch(error) {
       console.log(error.message);
     }
   }
 
   const disconnect = async () => {
+    setConnected(false)
+    setAccount(null)
+  }
+
+  const deleteAccount = async () => {
     try {
       const db = await openDatabase();
       const transaction = db.transaction(["keys"], "readwrite");
@@ -56,8 +63,19 @@ function App() {
       console.log('Wallet created and private key stored securely');
       setAccount(wallet.address);
       setConnected(true);
+      await fetchBalance(wallet.address, provider);
     } catch(error) {
       console.log(error.message);
+    }
+  }
+
+  const fetchBalance = async (address, provider) => {
+    try {
+      const balance = await provider.getBalance(address)
+      console.log(balance)
+      setBalance(balance.toString())
+    } catch (error) {
+      console.log('Error fetching balance:', error.message)
     }
   }
 
@@ -143,14 +161,16 @@ function App() {
 
       <h1>Bank of Ethereum</h1>
 
-      <button onClick={createAccount}>create account</button>
-
-      {!connected && 
+      {!connected && (
+        <>
         <button 
           className='account' 
           onClick={connect}>
            Login
         </button>
+        <button onClick={createAccount}>create account</button>
+        </>
+        )
       }
 
       {connected && (
@@ -160,6 +180,8 @@ function App() {
           onClick={disconnect}>
             {account.substr(0, 6) + "..."}
           </button>
+          <button onClick={deleteAccount}>Delete Account</button>
+          <p>Balance: {ethers.formatEther(balance)} ETH</p>
         </>
       )}
 
