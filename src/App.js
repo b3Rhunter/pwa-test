@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ethers } from 'ethers'
-import * as Keychain from 'react-native-keychain';
 
 function App() {
 
@@ -9,26 +8,38 @@ function App() {
 
   const connect = async () => {
     try {
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const address = await signer.getAddress()
-      const message = "Sign into the Bank of Ethereum?"
-      const sig = await signer.signMessage(message);
-      const verify = ethers.verifyMessage(message, sig)
-      if (verify === address) {
-        setConnected(true)
-        setAccount(address)
+      const db = await openDatabase();
+      const encryptedKey = await getEncryptedKey(db);
+      
+      if (encryptedKey) {
+        const privateKey = await decryptPrivateKey(encryptedKey.encryptedData, encryptedKey.iv, encryptedKey.key);
+        const provider = new ethers.InfuraProvider('mainnet');
+        const wallet = new ethers.Wallet(privateKey, provider);
+        const address = await wallet.getAddress();
+        setConnected(true);
+        setAccount(address);
+      } else {
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+        const address = await signer.getAddress();
+        setConnected(true);
+        setAccount(address);
       }
     } catch(error) {
-      console.log(error.message)
+      console.log(error.message);
     }
   }
 
   const disconnect = async () => {
     try {
-      setConnected(false)
+      const db = await openDatabase();
+      const transaction = db.transaction(["keys"], "readwrite");
+      const store = transaction.objectStore("keys");
+      await store.delete("walletPrivateKey");
+      setConnected(false);
+      setAccount(null);
     } catch(error) {
-      console.log(error.message)
+      console.log(error.message);
     }
   }
 
@@ -37,15 +48,94 @@ function App() {
       const provider = new ethers.InfuraProvider('mainnet');
       const wallet = ethers.Wallet.createRandom(provider);
       
-      // Store the private key in the keychain
-      await Keychain.setGenericPassword('walletPrivateKey', wallet.privateKey);
+      const encryptedData = await encryptPrivateKey(wallet.privateKey);
       
-      console.log('Wallet created and private key stored in keychain');
+      const db = await openDatabase();
+      await storeEncryptedKey(db, encryptedData);
+      
+      console.log('Wallet created and private key stored securely');
       setAccount(wallet.address);
       setConnected(true);
     } catch(error) {
       console.log(error.message);
     }
+  }
+
+  function openDatabase() {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open("WalletDatabase", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = () => {
+        const db = request.result;
+        db.createObjectStore("keys", { keyPath: "id" });
+      };
+    });
+  }
+  
+  function storeEncryptedKey(db, encryptedData) {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["keys"], "readwrite");
+      const store = transaction.objectStore("keys");
+      const request = store.put({ id: "walletPrivateKey", ...encryptedData });
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  }
+  
+  function getEncryptedKey(db) {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(["keys"], "readonly");
+      const store = transaction.objectStore("keys");
+      const request = store.get("walletPrivateKey");
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+  }
+
+  async function encryptPrivateKey(privateKey) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(privateKey);
+    
+    const key = await window.crypto.subtle.generateKey(
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+  
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encryptedData = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv: iv },
+      key,
+      data
+    );
+  
+    const exportedKey = await window.crypto.subtle.exportKey("raw", key);
+    
+    return {
+      encryptedData: new Uint8Array(encryptedData),
+      iv: iv,
+      key: new Uint8Array(exportedKey)
+    };
+  }
+  
+  async function decryptPrivateKey(encryptedData, iv, key) {
+    const importedKey = await window.crypto.subtle.importKey(
+      "raw",
+      key,
+      { name: "AES-GCM", length: 256 },
+      true,
+      ["encrypt", "decrypt"]
+    );
+  
+    const decryptedData = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv: iv },
+      importedKey,
+      encryptedData
+    );
+  
+    const decoder = new TextDecoder();
+    return decoder.decode(decryptedData);
   }
 
   return (
